@@ -14,6 +14,6 @@ RUN apt install -y nano mc fail2ban openssh-server \
 RUN apt install -y python3 python3-pip build-essential zip 
 RUN apt install -y r-base 
 RUN apt install -y perl 
-
+RUN apt install -y openjdk-25-jdk openjdk-25-jre
 # bioinformatics tools 
 RUN apt install -y samtools bedtools 
