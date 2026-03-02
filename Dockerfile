@@ -1,4 +1,5 @@
 FROM debian:latest
+ENV DEBIAN_FRONTEND=noninteractive
 
 EXPOSE 22
 
@@ -17,3 +18,9 @@ RUN apt install -y perl
 RUN apt install -y openjdk-25-jdk openjdk-25-jre
 # bioinformatics tools 
 RUN apt install -y samtools bedtools 
+
+# install the davfs2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      davfs2 ca-certificates \
+    && echo "davfs2 davfs2/suid_file boolean true" | debconf-set-selections \
+    && dpkg-reconfigure -f noninteractive davfs2
