@@ -1,26 +1,114 @@
 FROM debian:latest
-ENV DEBIAN_FRONTEND=noninteractive
 
 EXPOSE 22
 
 WORKDIR /root
 
-RUN apt update && apt upgrade -y
+# Avoid interactive installation prompts
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
 
-# Commonly used tools
-RUN apt install -y nano mc fail2ban openssh-server \
- curl wget git sshfs apt-utils bc
+# --------------------------------------------------
+# 1. Update system and install essential tools
+# --------------------------------------------------
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        wget \
+        gnupg \
+        jq \
+        nano \
+        mc \
+        fail2ban \
+        openssh-server \
+        sshfs \
+        git \
+        apt-utils \
+        bc \
+        unzip \
+        zip \
+        xz-utils \
+        procps \
+        less \
+        file \
+        bash-completion \
+        && \
+    rm -rf /var/lib/apt/lists/*
 
-# Programming & bioinformatics tools 
-RUN apt install -y python3 python3-pip build-essential zip 
-RUN apt install -y r-base 
-RUN apt install -y perl 
-RUN apt install -y openjdk-25-jdk openjdk-25-jre
-# bioinformatics tools 
-RUN apt install -y samtools bedtools 
+# --------------------------------------------------
+# 2. Programming languages and development tools
+# --------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        python3-dev \
+        build-essential \
+        pkg-config \
+        r-base \
+        r-base-dev \
+        perl \
+        openjdk-25-jdk \
+        && \
+    rm -rf /var/lib/apt/lists/*
 
-# install the davfs2
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      davfs2 ca-certificates \
-    && echo "davfs2 davfs2/suid_file boolean true" | debconf-set-selections \
-    && dpkg-reconfigure -f noninteractive davfs2
+# --------------------------------------------------
+# 3. Bioinformatics tools
+# --------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        samtools \
+        bedtools \
+        && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------
+# 4. WebDAV and filesystem utilities
+# --------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        davfs2 \
+        fuse3 \
+        && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------
+# 5. Install latest stable rclone from GitHub
+# Automatically detects CPU architecture
+# --------------------------------------------------
+RUN set -eux; \
+    ARCH="$(dpkg --print-architecture)"; \
+    case "$ARCH" in \
+        amd64|arm64) ;; \
+        *) echo "Unsupported rclone architecture: $ARCH"; exit 1 ;; \
+    esac; \
+    RELEASE_JSON="$(curl -fsSL \
+        https://api.github.com/repos/rclone/rclone/releases/latest)"; \
+    RCLONE_URL="$(printf '%s' "$RELEASE_JSON" | \
+        jq -r --arg arch "$ARCH" \
+        '.assets[] | select(.name | endswith("-linux-" + $arch + ".deb")) | .browser_download_url')"; \
+    test -n "$RCLONE_URL"; \
+    curl -fL "$RCLONE_URL" -o /tmp/rclone.deb; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends /tmp/rclone.deb; \
+    rm -f /tmp/rclone.deb; \
+    rm -rf /var/lib/apt/lists/*; \
+    rclone version
+
+# --------------------------------------------------
+# 6. Verify installed tools
+# --------------------------------------------------
+RUN python3 --version && \
+    pip3 --version && \
+    R --version && \
+    perl --version && \
+    java -version && \
+    samtools --version | head -n 1 && \
+    bedtools --version && \
+    rclone version
+
+CMD ["/bin/bash"]
