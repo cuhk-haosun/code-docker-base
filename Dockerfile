@@ -1,3 +1,4 @@
+
 FROM debian:latest
 
 EXPOSE 22
@@ -57,7 +58,23 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 3. Bioinformatics tools
+# 3. Node.js 24 LTS for Gitea Actions
+# Required by JavaScript actions such as checkout
+# --------------------------------------------------
+RUN set -eux; \
+    curl -fsSL \
+        https://deb.nodesource.com/setup_24.x \
+        -o /tmp/nodesource_setup.sh; \
+    bash /tmp/nodesource_setup.sh; \
+    apt-get install -y --no-install-recommends nodejs; \
+    rm -f /tmp/nodesource_setup.sh; \
+    rm -rf /var/lib/apt/lists/*; \
+    command -v node; \
+    node --version; \
+    npm --version
+
+# --------------------------------------------------
+# 4. Bioinformatics tools
 # --------------------------------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -67,7 +84,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 4. WebDAV and filesystem utilities
+# 5. WebDAV and filesystem utilities
 # --------------------------------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -77,7 +94,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 5. Install latest stable rclone from GitHub
+# 6. Install latest stable rclone from GitHub
 # Automatically detects CPU architecture
 # --------------------------------------------------
 RUN set -eux; \
@@ -100,15 +117,19 @@ RUN set -eux; \
     rclone version
 
 # --------------------------------------------------
-# 6. Verify installed tools
+# 7. Verify installed tools
 # --------------------------------------------------
-RUN python3 --version && \
-    pip3 --version && \
-    R --version && \
-    perl --version && \
-    java -version && \
-    samtools --version | head -n 1 && \
-    bedtools --version && \
+RUN set -eux; \
+    node --version; \
+    npm --version; \
+    git --version; \
+    python3 --version; \
+    pip3 --version; \
+    R --version; \
+    perl --version; \
+    java -version; \
+    samtools --version | head -n 1; \
+    bedtools --version; \
     rclone version
 
 CMD ["/bin/bash"]
