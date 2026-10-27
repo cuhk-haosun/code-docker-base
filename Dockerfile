@@ -37,7 +37,8 @@ RUN apt-get update && \
         less \
         file \
         bash-completion \
-    && rm -rf /var/lib/apt/lists/*
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
 # 2. Programming languages and development tools
@@ -54,71 +55,50 @@ RUN apt-get update && \
         r-base-dev \
         perl \
         openjdk-25-jdk \
-    && rm -rf /var/lib/apt/lists/*
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 3. Node.js 24 LTS for Gitea Actions
-# Required by JavaScript actions such as checkout
-# --------------------------------------------------
-RUN set -eux; \
-    curl -fsSL \
-        https://deb.nodesource.com/setup_24.x \
-        -o /tmp/nodesource_setup.sh; \
-    bash /tmp/nodesource_setup.sh; \
-    apt-get install -y --no-install-recommends nodejs; \
-    rm -f /tmp/nodesource_setup.sh; \
-    rm -rf /var/lib/apt/lists/*; \
-    command -v node; \
-    node --version; \
-    npm --version
-
-# --------------------------------------------------
-# 4. Bioinformatics tools
+# 3. Bioinformatics tools
 # --------------------------------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         samtools \
         bedtools \
-    && rm -rf /var/lib/apt/lists/*
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 5. WebDAV and filesystem utilities
+# 4. WebDAV and filesystem utilities
 # --------------------------------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         davfs2 \
         fuse3 \
-    && rm -rf /var/lib/apt/lists/*
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 6. Install Docker CLI
+# 5. Install Docker CLI
 # --------------------------------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        docker.io \
-    && rm -rf /var/lib/apt/lists/*
+        docker.io && \
+    rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# 7. Install latest stable rclone from GitHub
-# Automatically detects CPU architecture
+# 6. Install latest rclone (AMD64 only)
 # --------------------------------------------------
 RUN set -eux; \
-    ARCH="$(dpkg --print-architecture)"; \
-    case "$ARCH" in \
-        amd64|arm64) ;; \
-        *) echo "Unsupported rclone architecture: $ARCH"; exit 1 ;; \
-    esac; \
-    RELEASE_JSON="$(curl -fsSL \
-        https://api.github.com/repos/rclone/rclone/releases/latest)"; \
-    RCLONE_URL="$(printf '%s' "$RELEASE_JSON" | \
-        jq -r --arg arch "$ARCH" \
-        '.assets[] | select(.name | endswith("-linux-" + $arch + ".deb")) | .browser_download_url')"; \
-    test -n "$RCLONE_URL"; \
-    curl -fL "$RCLONE_URL" -o /tmp/rclone.deb; \
+    RCLONE_URL="https://downloads.rclone.org/rclone-current-linux-amd64.deb"; \
+    curl -fL --retry 5 --retry-all-errors \
+        "$RCLONE_URL" -o /tmp/rclone.deb; \
     apt-get update; \
-    apt-get install -y --no-install-recommends /tmp/rclone.deb; \
+    apt-get install -y --no-install-recommends \
+        /tmp/rclone.deb; \
     rm -f /tmp/rclone.deb; \
     rm -rf /var/lib/apt/lists/*; \
     rclone version
+
 
 CMD ["/bin/bash"]
